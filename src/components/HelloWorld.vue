@@ -18,7 +18,17 @@
 <script lang="ts" setup>
 import { ref, defineProps, onMounted } from 'vue';
 import { TaskQueue } from '../common/utils';
+import { formDataApi } from '@/assets/http/api';
 const worker = new Worker(new URL('./test.ts', import.meta.url));
+
+class Upload extends formDataApi {
+  async getMenuTree(params: any): Promise<any> {
+    return this.post('/api/upload', params);
+  }
+}
+
+const uploadApi = new Upload();
+
 
 interface Props {
   multiple: boolean;
@@ -31,21 +41,37 @@ const uploadRef = ref<HTMLInputElement | null>(null);
 
 const sectionSize = ref(1024 * 1024 * 1);
 
+const fileSparkMD5: any = ref([])
+
 const queue = new TaskQueue(5);
 
 const hanldeClick = () => {
   //
 };
 
-const handleChange = () => {
+const handleChange = async () => {
   const fileInput = uploadRef.value;
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const file = fileInput!.files![0];
   if (file) {
+    console.log("🚀 ~ file: HelloWorld.vue:57 ~ handleChange ~ file:", file)
     const fileList = fileSection(file);
-    getFile(file);
+    const params = new FormData();
+    params.set('file', fileList[0].fileChuncks, fileList[0].fileName);
+    uploadApi.getMenuTree(params)
+    const data = await getFile(file);
+    fileSparkMD5.value.push({ md5Value: data, fileKey: file.name });
     if (fileList.length) {
-      //
+      console.log("🚀 ~ file: HelloWorld.vue:58 ~ handleChange ~ fileList:", fileList)
+      fileList.forEach((chuncks: any) => {
+        // fileChuncks
+        // fileName
+        // const params = new FormData();
+        // params.set('file', chuncks.fileChuncks);
+      });
+      // const params = new FormData();
+      // params.set
+      // queue.addTask(uploadApi.getMenuTree())
     }
     console.log('🚀 ~ file: test.vue:42 ~ handleChange ~ fileList:', fileList);
   }
@@ -77,10 +103,8 @@ const getFile = (file: any) => {
       });
       worker.onmessage = ({ data: { fileMd5 } }) => {
         console.log(fileMd5, 'fileMd5');
+        r(fileMd5);
       };
-      // const fileMd5 = SparkMD5.ArrayBuffer.hash(e.target.result);
-      // console.log("🚀 ~ file: HelloWorld.vue:76 ~ returnnewPromise ~ fileMd5:", fileMd5)
-      r(fileInfo.result);
     };
   });
 };
