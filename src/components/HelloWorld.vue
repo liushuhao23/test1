@@ -17,9 +17,8 @@
 
 <script lang="ts" setup>
 import { ref, defineProps, onMounted } from 'vue';
-import { TaskQueue } from '../common/utils'
-import SparkMD5 from 'spark-md5';
-
+import { TaskQueue } from '../common/utils';
+const worker = new Worker(new URL('./test.ts', import.meta.url));
 
 interface Props {
   multiple: boolean;
@@ -32,8 +31,7 @@ const uploadRef = ref<HTMLInputElement | null>(null);
 
 const sectionSize = ref(1024 * 1024 * 1);
 
-const queue = new TaskQueue(5); 
-
+const queue = new TaskQueue(5);
 
 const hanldeClick = () => {
   //
@@ -43,14 +41,15 @@ const handleChange = () => {
   const fileInput = uploadRef.value;
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const file = fileInput!.files![0];
-  const fileList = fileSection(file);
-  getFile(file)
-  if (fileList.length) {
-    //
+  if (file) {
+    const fileList = fileSection(file);
+    getFile(file);
+    if (fileList.length) {
+      //
+    }
+    console.log('🚀 ~ file: test.vue:42 ~ handleChange ~ fileList:', fileList);
   }
-  console.log('🚀 ~ file: test.vue:42 ~ handleChange ~ fileList:', fileList);
 };
-
 
 const fileSection = (file: any) => {
   const chuncks: any = [];
@@ -60,7 +59,7 @@ const fileSection = (file: any) => {
     end = Math.min(start + sectionSize.value, file.size);
     chuncks.push({
       fileChuncks: file.slice(start, end),
-      fileName: file.name
+      fileName: file.name,
     });
     start = end;
   }
@@ -72,20 +71,27 @@ const getFile = (file: any) => {
     const fileInfo = new FileReader();
     fileInfo.readAsArrayBuffer(file);
     fileInfo.onload = (e: any) => {
-      const fileMd5 = SparkMD5.ArrayBuffer.hash(e.target.result);
-      console.log("🚀 ~ file: HelloWorld.vue:76 ~ returnnewPromise ~ fileMd5:", fileMd5)
+      console.log(e.target.result)
+      worker.postMessage({
+        fileResult: e.target.result
+      });
+      worker.onmessage = ({ data: { fileMd5 } }) => {
+        console.log(fileMd5, 'fileMd5');
+      };
+      // const fileMd5 = SparkMD5.ArrayBuffer.hash(e.target.result);
+      // console.log("🚀 ~ file: HelloWorld.vue:76 ~ returnnewPromise ~ fileMd5:", fileMd5)
       r(fileInfo.result);
     };
-  })
-}
+  });
+};
 
 const handleUpload = () => {
   //
 };
 
-onMounted(() => {
-  // const queue = new TaskQueue(5); 
-  // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve(sectionSize.value), 1000)))
+onMounted(async () => {
+
+
   // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve("Task 2"), 200)))
   // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve("Task 3"), 1000)))
   // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve("Task 4"), 1000)))

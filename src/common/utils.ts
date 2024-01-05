@@ -4,7 +4,7 @@
  * @Autor: liushuhao
  * @Date: 2024-01-04 13:37:47
  * @LastEditors: liushuhao
- * @LastEditTime: 2024-01-04 17:38:02
+ * @LastEditTime: 2024-01-05 09:23:49
  */
 const checkHandler = (queue: unknown) => {
     if (!queue) throw new Error('queue is not defined');
