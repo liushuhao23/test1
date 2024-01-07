@@ -1,7 +1,7 @@
 /*
  * @Author: liushuhao
  * @Date: 2020-08-15 20:30:43
- * @LastEditTime: 2024-01-05 15:04:58
+ * @LastEditTime: 2024-01-07 14:19:15
  * @LastEditors: liushuhao
  * @Description:
  * @FilePath: /test-koa/app.js
@@ -39,12 +39,12 @@ const port = process.env.PORT || config.port
 // error handler
 // onerror(app)
 app.use(cors())
-app.use(koaBody({
-  multipart: true,
-  formidable: {
-    // maxFileSize: 200 * 1024 * 1024    // 设置上传文件大小最大限制，默认2M
-  }
-}))
+// app.use(koaBody({
+//   multipart: true,
+//   formidable: {
+//     // maxFileSize: 200 * 1024 * 1024    // 设置上传文件大小最大限制，默认2M
+//   }
+// }))
 app.use(async (ctx, next) => {
   if (ctx.request.method === 'GET') {
     await next();

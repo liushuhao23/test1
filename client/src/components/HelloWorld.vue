@@ -18,7 +18,7 @@
 <script lang="ts" setup>
 import { ref, defineProps, onMounted } from 'vue';
 import { TaskQueue } from '../common/utils';
-import { formDataApi } from '@/assets/http/api';
+import { formDataApi, Api } from '@/assets/http/api';
 const worker = new Worker(new URL('./test.ts', import.meta.url));
 
 class Upload extends formDataApi {
@@ -27,8 +27,18 @@ class Upload extends formDataApi {
   }
 }
 
+class uploadOther extends formDataApi {
+  async mergeFile(params: any): Promise<any> {
+    return this.post('/api/merge', params);
+  }
+}
+// async mergeFileFun(params: any): Promise<any> {
+//     return this.post('/api/merge', params);
+//   }
+
 const uploadApi = new Upload();
 
+const uploadOtherApi = new uploadOther();
 
 interface Props {
   multiple: boolean;
@@ -41,9 +51,11 @@ const uploadRef = ref<HTMLInputElement | null>(null);
 
 const sectionSize = ref(1024 * 1024 * 1);
 
-const fileSparkMD5: any = ref([])
+const fileSparkMD5: any = ref([]);
 
 const queue = new TaskQueue(5);
+
+const executeIndex = ref(0)
 
 const hanldeClick = () => {
   //
@@ -53,22 +65,44 @@ const handleChange = async () => {
   const fileInput = uploadRef.value;
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const file = fileInput!.files![0];
+  executeIndex.value = 0;
   if (file) {
-    console.log("🚀 ~ file: HelloWorld.vue:57 ~ handleChange ~ file:", file)
+    console.log('🚀 ~ file: HelloWorld.vue:57 ~ handleChange ~ file:', file);
     const fileList = fileSection(file);
     const params = new FormData();
-    params.set('file', fileList[0].fileChuncks, fileList[0].fileName);
-    uploadApi.getMenuTree(params)
+    // params.set('file', fileList[0].fileChuncks, fileList[0].fileName);
+
     const data = await getFile(file);
     fileSparkMD5.value.push({ md5Value: data, fileKey: file.name });
+    const getMenuTree = (params) => {
+      return uploadApi.getMenuTree(params).then((res) => {
+        executeIndex.value += 1
+        console.log("🚀 ~ file: HelloWorld.vue:69 ~ returnuploadApi.getMenuTree ~ executeIndex:", executeIndex.value)
+        if (executeIndex.value === fileList.length)  {
+          console.log('上传能完成', executeIndex.value)
+          console.log('输出fileList.length',  fileList.length)
+          mergeFile(fileSparkMD5.value, fileList.length);
+        }
+      })
+    }
+    console.log('输出fileList', fileList.length )
     if (fileList.length) {
-      console.log("🚀 ~ file: HelloWorld.vue:58 ~ handleChange ~ fileList:", fileList)
-      fileList.forEach((chuncks: any) => {
-        // fileChuncks
-        // fileName
-        // const params = new FormData();
-        // params.set('file', chuncks.fileChuncks);
-      });
+      // console.log("🚀 ~ file: HelloWorld.vue:58 ~ handleChange ~ fileList:", fileList)
+      fileList.forEach((e: any, i) => {
+        const { md5Value, fileKey } = fileSparkMD5.value.find(
+          (item) => item.fileKey === e.fileName
+        );
+        let params = new FormData();
+        params.append('totalNumber', fileList.length);
+        params.append('chunkSize', sectionSize.value);
+        params.append('chunckNumber', i);
+        params.append('md5', md5Value); //文件唯一标识
+        params.append('name', fileKey);
+        params.append('file', new File([e.fileChuncks], fileKey));
+        queue.addTask(() => getMenuTree(params))
+        console.log('输出', executeIndex.value)
+
+      }); 
       // const params = new FormData();
       // params.set
       // queue.addTask(uploadApi.getMenuTree())
@@ -76,6 +110,19 @@ const handleChange = async () => {
     console.log('🚀 ~ file: test.vue:42 ~ handleChange ~ fileList:', fileList);
   }
 };
+
+const mergeFile = (fileInfo, chunckTotal) => {
+  const { md5Value,fileKey }  = fileInfo[0];
+  const params = {
+        totalNumber:chunckTotal,
+        md5:md5Value,
+        name:fileKey
+    }
+    uploadOtherApi.mergeFile(params).then((res) => {
+      console.log('输出res', res)
+    })
+    console.log('输出params', params )
+}
 
 const fileSection = (file: any) => {
   const chuncks: any = [];
@@ -97,9 +144,9 @@ const getFile = (file: any) => {
     const fileInfo = new FileReader();
     fileInfo.readAsArrayBuffer(file);
     fileInfo.onload = (e: any) => {
-      console.log(e.target.result)
+      console.log(e.target.result);
       worker.postMessage({
-        fileResult: e.target.result
+        fileResult: e.target.result,
       });
       worker.onmessage = ({ data: { fileMd5 } }) => {
         console.log(fileMd5, 'fileMd5');
@@ -114,8 +161,6 @@ const handleUpload = () => {
 };
 
 onMounted(async () => {
-
-
   // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve("Task 2"), 200)))
   // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve("Task 3"), 1000)))
   // queue.addTask(() => new Promise(resolve => setTimeout(() => resolve("Task 4"), 1000)))

@@ -4,7 +4,7 @@
  * @Autor: liushuhao
  * @Date: 2024-01-04 13:37:47
  * @LastEditors: liushuhao
- * @LastEditTime: 2024-01-05 09:23:49
+ * @LastEditTime: 2024-01-07 16:06:41
  */
 const checkHandler = (queue: unknown) => {
     if (!queue) throw new Error('queue is not defined');
@@ -31,7 +31,7 @@ export class TaskQueue {
         this.running++;
         const task = this.queueList.shift();
         task().then((res: any) => {
-            console.log(res)
+            // console.log(res)
         }).catch((error: undefined) => {
             // console.log(error);
         }).finally(() => {

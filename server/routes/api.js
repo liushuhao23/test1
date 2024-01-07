@@ -1,19 +1,21 @@
 /*
  * @Author: liushuhao
  * @Date: 2020-08-15 20:30:43
- * @LastEditTime: 2024-01-05 17:50:26
+ * @LastEditTime: 2024-01-07 16:43:36
  * @LastEditors: liushuhao
  * @Description:
  * @FilePath: /test-koa/routes/api.js
  */
 
+const path = require("path");
+const fs = require("fs");
 let users = require("../controller/user/userlogin.js");
 // let uploadjs = require('../controller/Upload/Upload.js');
 var router = require("koa-router")();
 let JwtUtil = require("../common/jwt.js");
 const multipart = require("koa-multer");
-const upload = multipart({ dest: path.join(__dirname, "public/upload") });
-const uploadPath = path.join(__dirname, "public/upload");
+const upload = multipart({ dest: path.join(process.cwd(), "public/upload") });
+const uploadPath = path.join(process.cwd(), "public/upload");
 
 // 登录
 router.post("/userlogin", async function (ctx, next) {
@@ -40,32 +42,104 @@ router.post("/userlogin", async function (ctx, next) {
   }
 });
 
+// merge
+router.post("/merge", async function (ctx, next) {
+  console.log("输出", ctx.request.body);
+  const {totalNumber,md5,name} = ctx.request.body;
+  try {
+    //分片存储得文件夹路径
+    const chunckPath = path.join(uploadPath, md5, "/");
+    //创建合并后的文件
+    console.log(name + "我是视频地址");
+    const filePath = path.join(uploadPath, name);
+    //读取对应hash文件夹下的所有分片文件名称
+    const chunckList = fs.existsSync(chunckPath)
+      ? fs.readdirSync(chunckPath)
+      : [];
+    console.log(chunckList + "我是视频地址");
+    //创建储存文件
+    fs.writeFileSync(filePath, "");
+    //判断切片是否完整
+    console.log(chunckList.length, totalNumber, "我是总地址，和分片地址");
+    let total = Number(totalNumber)
+    console.log('输出', typeof(totalNumber))
+    if (chunckList.length !== total) {
+      // ctx.status = 500;
+      // ctx.message = "Merge failed, missing file slices";
+      // ctx.res.end('error');
+      console.log('输出xxxxxxxxxxxxxxxxxxx',  )
+      ctx.body = {
+        code: 500,
+        message: "合并文件失败",
+        data: {
+          url: "",
+        },
+        success: true,
+      };
+      process.exit();
+    }
+    for (let i = 0; i < total; i++) {
+      const chunck = fs.readFileSync(chunckPath + md5 + "-" + i);
+      //写入当前切片
+      fs.appendFileSync(filePath, chunck);
+      //删除已合并的切片
+      fs.unlinkSync(chunckPath + md5 + "-" + i);
+    }
+    //删除空文件夹
+    fs.rmdirSync(chunckPath);
+    ctx.body = {
+      code: 200,
+      message: "合并文件成功",
+      data: {
+        url: "",
+      },
+      success: true,
+    };
+  } catch (e) {
+    ctx.status = 500;
+    ctx.res.end("合并失败");
+    ctx.body = {
+      code: 500,
+      message: "合并文件失败",
+      data: {
+        url: "",
+      },
+      success: false,
+    };
+  }
+
+});
 // 上传
 router.post("/upload", upload.single("file"), async function (ctx, next) {
-  // console.log('输出ctx', ctx)
-  const {
-    totalNumber, //分片总数
-    chunckNumber, //分片序号
-    chunkSize, //分片大小
-    md5, //文件hash值（唯一）
-    name,
-  } = ctx.req.body;
-  //指定hash文件路径
-  const chunckPath = path.join(uploadPath, md5, "/");
-  if (!fs.existsSync(chunckPath)) {
-    fs.mkdirSync(chunckPath);
+  try {
+    const {
+      totalNumber, //分片总数
+      chunckNumber, //分片序号
+      chunkSize, //分片大小
+      md5, //文件hash值（唯一）
+      name,
+    } = ctx.req.body;
+    //指定hash文件路径
+    // console.log("🚀 ~ file: api.js:56 ~ uploadPath:", uploadPath)
+    const chunckPath = path.join(uploadPath, md5, "/");
+    if (!fs.existsSync(chunckPath)) {
+      fs.mkdirSync(chunckPath);
+    }
+    //移动文件到指定目录
+    fs.renameSync(ctx.req.file.path, chunckPath + md5 + "-" + chunckNumber);
+    // const fileresult = await uploadjs(file);
+    ctx.body = {
+      code: 200,
+      message: "上传成功",
+      data: {
+        url: "",
+      },
+      success: true,
+    }
+  } catch (error) {
+    console.log('输出',  error)
   }
-  //移动文件到指定目录
-  fs.renameSync(ctx.req.file.path, chunckPath + md5 + "-" + chunckNumber);
-  // const fileresult = await uploadjs(file);
-  ctx.body = {
-    code: 200,
-    message: "上传成功",
-    data: {
-      url: "",
-    },
-    success: true,
-  };
+;
   // if (fileresult.success) {
   //   ctx.body = {
   //     code: 200,
