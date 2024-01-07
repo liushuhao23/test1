@@ -1,7 +1,7 @@
 /*
  * @Author: liushuhao
  * @Date: 2020-08-15 20:30:43
- * @LastEditTime: 2024-01-07 16:43:36
+ * @LastEditTime: 2024-01-07 19:31:38
  * @LastEditors: liushuhao
  * @Description:
  * @FilePath: /test-koa/routes/api.js
@@ -44,7 +44,6 @@ router.post("/userlogin", async function (ctx, next) {
 
 // merge
 router.post("/merge", async function (ctx, next) {
-  console.log("输出", ctx.request.body);
   const {totalNumber,md5,name} = ctx.request.body;
   try {
     //分片存储得文件夹路径
@@ -62,12 +61,7 @@ router.post("/merge", async function (ctx, next) {
     //判断切片是否完整
     console.log(chunckList.length, totalNumber, "我是总地址，和分片地址");
     let total = Number(totalNumber)
-    console.log('输出', typeof(totalNumber))
     if (chunckList.length !== total) {
-      // ctx.status = 500;
-      // ctx.message = "Merge failed, missing file slices";
-      // ctx.res.end('error');
-      console.log('输出xxxxxxxxxxxxxxxxxxx',  )
       ctx.body = {
         code: 500,
         message: "合并文件失败",

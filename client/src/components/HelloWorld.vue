@@ -6,7 +6,7 @@
         type="file"
         ref="uploadRef"
         @change="handleChange"
-        :multiple="$props.multiple"
+        :multiple="true"
         :accept="$props.accept"
       />
       <a href="#none" @click="handleUpload()">上传文件</a>
@@ -56,59 +56,70 @@ const fileSparkMD5: any = ref([]);
 const queue = new TaskQueue(5);
 
 const executeIndex = ref(0)
+const fileListAll = ref([])
 
 const hanldeClick = () => {
   //
 };
 
+const getMenuTree = (params, length) => {
+      return uploadApi.getMenuTree(params).then((res) => {
+        executeIndex.value += 1
+        console.log("🚀 ~ file: HelloWorld.vue:69 ~ returnuploadApi.getMenuTree ~ executeIndex:", executeIndex.value)
+        if (executeIndex.value ===length)  {
+          console.log('上传能完成', executeIndex.value)
+          console.log('输出fileList.length',  length)
+          mergeFile(fileSparkMD5.value, length);
+        }
+      })
+    }
+
 const handleChange = async () => {
   const fileInput = uploadRef.value;
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const file = fileInput!.files![0];
+  console.log("🚀 ~ file: HelloWorld.vue:80 ~ handleChange ~ file:", fileInput!.files!)
   executeIndex.value = 0;
-  if (file) {
-    console.log('🚀 ~ file: HelloWorld.vue:57 ~ handleChange ~ file:', file);
-    const fileList = fileSection(file);
-    const params = new FormData();
-    // params.set('file', fileList[0].fileChuncks, fileList[0].fileName);
-
-    const data = await getFile(file);
-    fileSparkMD5.value.push({ md5Value: data, fileKey: file.name });
-    const getMenuTree = (params) => {
-      return uploadApi.getMenuTree(params).then((res) => {
-        executeIndex.value += 1
-        console.log("🚀 ~ file: HelloWorld.vue:69 ~ returnuploadApi.getMenuTree ~ executeIndex:", executeIndex.value)
-        if (executeIndex.value === fileList.length)  {
-          console.log('上传能完成', executeIndex.value)
-          console.log('输出fileList.length',  fileList.length)
-          mergeFile(fileSparkMD5.value, fileList.length);
-        }
-      })
+  let target = []
+  target =  Array.from( fileInput!.files).map((item) => {
+    return {
+      status: '准备中',
+      file: item,
+      MD5: ''
     }
-    console.log('输出fileList', fileList.length )
-    if (fileList.length) {
-      // console.log("🚀 ~ file: HelloWorld.vue:58 ~ handleChange ~ fileList:", fileList)
-      fileList.forEach((e: any, i) => {
-        const { md5Value, fileKey } = fileSparkMD5.value.find(
-          (item) => item.fileKey === e.fileName
-        );
-        let params = new FormData();
-        params.append('totalNumber', fileList.length);
-        params.append('chunkSize', sectionSize.value);
-        params.append('chunckNumber', i);
-        params.append('md5', md5Value); //文件唯一标识
-        params.append('name', fileKey);
-        params.append('file', new File([e.fileChuncks], fileKey));
-        queue.addTask(() => getMenuTree(params))
-        console.log('输出', executeIndex.value)
+  })
+  fileListAll.value.push(...target)
+  console.log("🚀 ~ file: HelloWorld.vue:84 ~ handleChange ~ fileList:", fileListAll.value)
+  // if (target.length) {
+  //   target.forEach((item) => {
+  //     const data = await getFile(item);
+  //     fileSparkMD5.value.push({ md5Value: data, fileKey: item.name });
+  //   });
+  // }
 
-      }); 
-      // const params = new FormData();
-      // params.set
-      // queue.addTask(uploadApi.getMenuTree())
-    }
-    console.log('🚀 ~ file: test.vue:42 ~ handleChange ~ fileList:', fileList);
-  }
+  // if (fileListAll.value) {
+  //   const fileList = fileSection(file);
+  //   // const data = await getFile(file);
+  //   // fileSparkMD5.value.push({ md5Value: data, fileKey: file.name });
+  //   let length = fileList.length;
+  //   if (fileList.length) {
+  //     fileList.forEach((e: any, i) => {
+  //       const { md5Value, fileKey } = fileSparkMD5.value.find(
+  //         (item) => item.fileKey === e.fileName
+  //       );
+  //       let params = new FormData();
+  //       params.append('totalNumber', fileList.length);
+  //       params.append('chunkSize', sectionSize.value);
+  //       params.append('chunckNumber', i);
+  //       params.append('md5', md5Value); //文件唯一标识
+  //       params.append('name', fileKey);
+  //       params.append('file', new File([e.fileChuncks], fileKey));
+  //       queue.addTask(() => getMenuTree(params, length))
+  //       console.log('输出', executeIndex.value)
+  //     }); 
+  //   }
+  //   console.log('🚀 ~ file: test.vue:42 ~ handleChange ~ fileList:', fileList);
+  // }
 };
 
 const mergeFile = (fileInfo, chunckTotal) => {
@@ -144,7 +155,7 @@ const getFile = (file: any) => {
     const fileInfo = new FileReader();
     fileInfo.readAsArrayBuffer(file);
     fileInfo.onload = (e: any) => {
-      console.log(e.target.result);
+      console.log(e);
       worker.postMessage({
         fileResult: e.target.result,
       });
